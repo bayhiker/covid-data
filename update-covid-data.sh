@@ -8,13 +8,12 @@ COVID_DATA_SOURCES_DIR_JHU="$COVID_DATA_SOURCES_DIR/COVID-19"
 echo "Current time is: $(date)"
 
 cd $COVID_DATA_SOURCES_DIR_JHU
-# if /usr/bin/git pull | grep -q 'Already up to date'; then
-if echo 'aaa' | grep -q 'Already up to date'; then
+if /usr/bin/git pull | grep -q 'Already up to date'; then
     echo 'Data is up-to-date, nothing to be done'
     exit 0
 fi
 cd $COVID_DATA_DIR
-source /usr/local/bin/virtualenvwrapper.sh
+source ~/.profile
 workon covid-data
 ./mesh_covid_data.py
 if [ $? -eq 0 ]
