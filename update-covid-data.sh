@@ -17,6 +17,7 @@ source ~/.profile
 workon covid-data
 ./mesh_covid_data.py
 if [ $? -ne 0 ]
+then
     echo "mesh_covid_data command failed"
 fi
 echo "Done"
