@@ -9,7 +9,7 @@ class TimeSeriesParser:
         self.raw_data_file_confirmed = "../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
         self.raw_data_file_deaths = "../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
         # self.json_folder = "../covid/data"
-        self.json_folder = "./data"
+        self.json_folder = "./data/covid"
         self.headers_time_series_confirmed = []
         self.headers_time_series_deaths = []
         self.least_recent_date = "1/22/20"
@@ -105,6 +105,7 @@ class TimeSeriesParser:
             "confirmed": {"time_series": {},},
             "deaths": {"time_series": {},},
             "population": {},
+            "names": {},
         }
 
     def process_county_data(self, county_data_confirmed, county_data_deaths):
@@ -116,6 +117,8 @@ class TimeSeriesParser:
             fips_state, self._get_default_data_root()
         )
         county_population = int(county_data_deaths["Population"])
+        county_name = county_data_deaths["Admin2"]
+        state_name = county_data_deaths["Province_State"]
         # No roll up for county data, therefore no need for a separtae time_series
         data_county = data_state.setdefault(
             fips,
@@ -125,12 +128,16 @@ class TimeSeriesParser:
                 "confirmed": county_data_confirmed,
                 "deaths": county_data_deaths,
                 "population": county_population,
+                "name": county_name,
             },
         )
         data_us["population"].setdefault(fips_state, 0)
         data_us["population"][fips_state] += county_population
+        if not fips_state in data_us["names"]:
+            data_us["names"][fips_state] = state_name
         data_state["population"].setdefault(fips, 0)
         data_state["population"][fips] += county_population
+        data_state["names"][fips] = county_name
 
         def update_us_and_state(case_type, num_cases):
             data_us[case_type]["time_series"].setdefault(d, 0)

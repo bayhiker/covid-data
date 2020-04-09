@@ -16,14 +16,7 @@ cd $COVID_DATA_DIR
 source ~/.profile
 workon covid-data
 ./mesh_covid_data.py
-if [ $? -eq 0 ]
-then
-    rm -rf $COVID_DIR/app/data && mv data $COVID_DIR/app/data
-else
+if [ $? -ne 0 ]
     echo "mesh_covid_data command failed"
 fi
-echo "Now rebuilding npm to pickup latest covid data..."
-nvm use 12
-cd $COVID_DIR
-./build.sh
 echo "Done"
