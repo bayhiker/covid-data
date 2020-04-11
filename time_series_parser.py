@@ -105,8 +105,18 @@ class TimeSeriesParser:
             "confirmed": {"time_series": {},},
             "deaths": {"time_series": {},},
             "population": {},
-            "names": {},
+            "names": {},  # key is state or county fips, value is name
+            "hashes": {},  # key is a hash of full name, value is fips, only used for counties in state data
         }
+
+    @staticmethod
+    def _get_county_name_hash(county_name):
+        # A sevent digit integer,
+        assert county_name is not None and len(county_name) > 2
+        county_name_hash = 1
+        for c in county_name.lower():
+            county_name_hash = (county_name_hash * ord(c)) % 9999999
+        return county_name_hash
 
     def process_county_data(self, county_data_confirmed, county_data_deaths):
         assert county_data_confirmed["FIPS"] == county_data_deaths["FIPS"]
@@ -118,6 +128,13 @@ class TimeSeriesParser:
         )
         county_population = int(county_data_deaths["Population"])
         county_name = county_data_deaths["Admin2"]
+        county_name_hash = (
+            TimeSeriesParser._get_county_name_hash(county_name)
+            if county_name is not None
+            and len(county_name) > 2
+            and not county_name.startswith("Out of ")
+            else -1
+        )
         state_name = county_data_deaths["Province_State"]
         # No roll up for county data, therefore no need for a separtae time_series
         data_county = data_state.setdefault(
@@ -129,6 +146,7 @@ class TimeSeriesParser:
                 "deaths": county_data_deaths,
                 "population": county_population,
                 "name": county_name,
+                "hash": county_name_hash,
             },
         )
         data_us["population"].setdefault(fips_state, 0)
@@ -138,6 +156,14 @@ class TimeSeriesParser:
         data_state["population"].setdefault(fips, 0)
         data_state["population"][fips] += county_population
         data_state["names"][fips] = county_name
+        if county_name_hash > 0 and county_name_hash in data_state["hashes"]:
+            current_county_name = data_state["names"][
+                data_state["hashes"][county_name_hash]
+            ]
+            assert county_name == current_county_name or print(
+                f'Hash Conflict: {county_name} and {data_state["names"][data_state["hashes"][county_name_hash]]}'
+            )
+        data_state["hashes"][county_name_hash] = fips
 
         def update_us_and_state(case_type, num_cases):
             data_us[case_type]["time_series"].setdefault(d, 0)

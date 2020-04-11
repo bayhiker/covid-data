@@ -11,3 +11,8 @@ These data source repos needs to be checked out to ../covid-data-sources/
 ## Development Setup
 
 - Create a virtualenv covid-data: mkvirtualenv -a /home/mike/code/covid-data -p /usr/bin/python3 covid-data
+- Flask web service is not used right now, however, it can be started with gunicorn command
+
+```
+gunicorn -w 1 -b 0.0.0.0:5000 wsgi
+```
