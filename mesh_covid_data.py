@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from time_series_parser import TimeSeriesParser
+from parser import TimeSeriesParser
 
 
 if __name__ == "__main__":
