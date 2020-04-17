@@ -18,7 +18,7 @@ from us import (
 
 class DescartesMobilityParser:
     def __init__(self, start_date_title, end_date_title, days_to_predict):
-        self.ndjson_path = "../covid-data-sources/DL-COVID-19/DL-us-mobility.ndjson"
+        self.ndjson_path = "../../covid-data-sources/DL-COVID-19/DL-us-mobility.ndjson"
         self.m50 = {}  # fips->{date->m50} absolute mobility level defined by Descartes
         self.m50_index = {}  # fips-> {date->m50_index}, 100*m50/m50_norm
         self.start_date_title = start_date_title

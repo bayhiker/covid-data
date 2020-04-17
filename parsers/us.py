@@ -1,3 +1,4 @@
+import os
 import json
 
 # To be consistent, population is sum of all population in ./json/state.json
@@ -63,7 +64,8 @@ state_fips_map = {
 
 
 def _load_fips_state_map():
-    with open("./json/states.json") as f:
+    where_am_i = os.path.dirname(os.path.realpath(__file__))
+    with open(f"{where_am_i}/json/states.json") as f:
         return json.load(f)
 
 

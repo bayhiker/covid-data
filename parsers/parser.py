@@ -16,10 +16,10 @@ from descarte import DescartesMobilityParser
 
 class TimeSeriesParser:
     def __init__(self):
-        self.raw_data_file_confirmed = "../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
-        self.raw_data_file_deaths = "../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+        self.raw_data_file_confirmed = "../../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
+        self.raw_data_file_deaths = "../../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
         # self.json_folder = "../covid/data"
-        self.json_folder = "./data/covid"
+        self.json_folder = "../data/covid"
         self.headers_time_series_confirmed = []
         self.headers_time_series_deaths = []
         self.least_recent_date = "1/22/20"
@@ -52,7 +52,7 @@ class TimeSeriesParser:
             else:
                 fips = ""
                 print(
-                    f"Ignoring {combined_key} for now, county_data_dict was {county_data_dict}"
+                    f"No FIPS found, ignoring {combined_key} for now, county_data_dict was {county_data_dict}"
                 )
         county_data_dict["FIPS"] = fips.zfill(5)
 
@@ -150,10 +150,12 @@ class TimeSeriesParser:
                 "least_recent_date": self.least_recent_date,
                 "most_recent_date": self.most_recent_date,
                 "confirmed": {
-                    x: int(county_data_confirmed[x]) for x in self.date_keys_history
+                    x: _parse_cases_count(county_data_confirmed[x])
+                    for x in self.date_keys_history
                 },
                 "deaths": {
-                    x: int(county_data_deaths[x]) for x in self.date_keys_history
+                    x: _parse_cases_count(county_data_deaths[x])
+                    for x in self.date_keys_history
                 },
                 "population": county_population,
                 "name": county_name,
@@ -208,8 +210,12 @@ class TimeSeriesParser:
             data_state[case_type]["time_series"][d] += num_cases
 
         for d in self.date_keys_history:
-            update_us_and_state("confirmed", int(county_data_confirmed.get(d, "0")))
-            update_us_and_state("deaths", int(county_data_deaths.get(d, "0")))
+            update_us_and_state(
+                "confirmed", _parse_cases_count(county_data_confirmed.get(d, "0"))
+            )
+            update_us_and_state(
+                "deaths", _parse_cases_count(county_data_deaths.get(d, "0"))
+            )
 
     def _get_json_path(self, fips):
         assert len(fips) in (1, 2, 5)
@@ -430,3 +436,8 @@ class TimeSeriesParser:
         self.add_mobility_data()
         # self.predict()
         self.dump_data()
+
+
+def _parse_cases_count(cases_from_csv):
+    # sometimes value is 0.0
+    return int(float(cases_from_csv))
