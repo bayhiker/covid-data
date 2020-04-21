@@ -88,11 +88,13 @@ def is_county_fips(fips):
 
 
 def split_county_fips(county_fips):
-    return (
-        None
-        if (county_fips is None or len(county_fips) != 5)
-        else (county_fips[:2], county_fips[2:])
-    )
+    if county_fips is None or len(county_fips) != 5:
+        return None
+    if county_fips.startswith("800") or county_fips.startswith("900"):
+        # 800xx is Out of CA etc, 900xx is Unassigned CA etc
+        return (county_fips[3:], county_fips[:3])
+    # Valid state counties, or 88888 / 99999 for two cruise chips
+    return (county_fips[:2], county_fips[2:])
 
 
 fips_state_map = _load_fips_state_map()

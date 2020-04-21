@@ -108,8 +108,8 @@ class TimeSeriesParser:
         return {
             "least_recent_date": self.least_recent_date,
             "most_recent_date": self.most_recent_date,
-            "confirmed": {"time_series": {}, "predctions": {},},
-            "deaths": {"time_series": {}, "predictions": {},},
+            "confirmed": {"time_series": {},},
+            "deaths": {"time_series": {},},
             "mobility": {"time_series": {},},
             "population": {},
             "names": {},  # key is state or county fips, value is name
@@ -179,23 +179,27 @@ class TimeSeriesParser:
         data_state["hashes"][county_name_hash] = fips
 
         def update_us_and_state(case_type, num_cases):
-            default_cases = {
-                "minCases": 1000000,
-                "maxCases": -1,
-                "minPerCapita": 100000000,
-                "maxPerCapita": -1,
-            }
+            def get_default_cases():
+                return {
+                    "minCases": 1000000,
+                    "maxCases": -1,
+                    "minPerCapita": 100000000,
+                    "maxPerCapita": -1,
+                }
+
             data_us[case_type]["time_series"].setdefault(d, 0)
             data_us[case_type]["time_series"][d] += num_cases
-            data_us[case_type].setdefault(d, default_cases)
+            data_us[case_type].setdefault(d, get_default_cases())
             data_us[case_type][d].setdefault(state_fips, 0)
             data_us[case_type][d][state_fips] += num_cases
-            data_state[case_type].setdefault(d, default_cases)
+            data_state[case_type].setdefault(d, get_default_cases())
             data_state[case_type][d][fips] = num_cases
-            if data_state[case_type][d]["minCases"] > num_cases:
-                data_state[case_type][d]["minCases"] = num_cases
-            if data_state[case_type][d]["maxCases"] < num_cases:
-                data_state[case_type][d]["maxCases"] = num_cases
+            if county_fips not in ("800", "900", "888", "999"):
+                # Only consider min/maxCases for regular counties
+                if data_state[case_type][d]["minCases"] > num_cases:
+                    data_state[case_type][d]["minCases"] = num_cases
+                if data_state[case_type][d]["maxCases"] < num_cases:
+                    data_state[case_type][d]["maxCases"] = num_cases
             data_state[case_type]["time_series"].setdefault(d, 0)
             data_state[case_type]["time_series"][d] += num_cases
 
@@ -382,7 +386,10 @@ class TimeSeriesParser:
                     print(f"C line:{line_confirmed}")
                     print(f"D line:{line_deaths}")
                     continue
-                if parsed_line_confirmed["FIPS"] == "00000":
+                if parsed_line_confirmed["FIPS"].startswith("000"):
+                    print(
+                        f"Ignoring US territories for now. FIPS was {parsed_line_confirmed['FIPS']}"
+                    )
                     continue
                 self.process_county_data(parsed_line_confirmed, parsed_line_deaths)
         # Go through data_us["0"]['confirmed'][by_date], each date, set 'minCases' and 'maxCases'
@@ -413,6 +420,12 @@ class TimeSeriesParser:
                     data_state_daily = data_state[case_type][d]
                     for county_fips in data_state_daily:
                         if not (len(county_fips) == 5 and county_fips.isdigit()):
+                            continue
+                        if (
+                            county_fips in ("99999", "88888")
+                            or county_fips.startswith("800")
+                            or county_fips.startswith("900")
+                        ):
                             continue
                         casesPerCapita = int(
                             data_state_daily[county_fips]
