@@ -179,28 +179,18 @@ class TimeSeriesParser:
         data_state["hashes"][county_name_hash] = fips
 
         def update_us_and_state(case_type, num_cases):
+            default_cases = {
+                "minCases": 1000000,
+                "maxCases": -1,
+                "minPerCapita": 100000000,
+                "maxPerCapita": -1,
+            }
             data_us[case_type]["time_series"].setdefault(d, 0)
             data_us[case_type]["time_series"][d] += num_cases
-            data_us[case_type].setdefault(
-                d,
-                {
-                    "minCases": 1000000,
-                    "maxCases": -1,
-                    "minPerCapita": 100000000,
-                    "maxPerCapita": -1,
-                },
-            )
+            data_us[case_type].setdefault(d, default_cases)
             data_us[case_type][d].setdefault(state_fips, 0)
             data_us[case_type][d][state_fips] += num_cases
-            data_state[case_type].setdefault(
-                d,
-                {
-                    "minCases": 1000000,
-                    "maxCases": -1,
-                    "minPerCapita": 100000000,
-                    "maxPerCapita": -1,
-                },
-            )
+            data_state[case_type].setdefault(d, default_cases)
             data_state[case_type][d][fips] = num_cases
             if data_state[case_type][d]["minCases"] > num_cases:
                 data_state[case_type][d]["minCases"] = num_cases
