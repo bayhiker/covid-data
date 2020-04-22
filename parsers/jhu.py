@@ -403,7 +403,7 @@ class TimeSeriesParser:
                     if data_us_daily["minCases"] > data_us_daily[fips]:
                         data_us_daily["minCases"] = data_us_daily[fips]
                     casesPerCapita = int(
-                        data_us_daily[fips] / population[fips] * 1000000000
+                        data_us_daily[fips] / population[fips] * pow(10, 6)
                     )
                     if data_us_daily["maxPerCapita"] < casesPerCapita:
                         data_us_daily["maxPerCapita"] = casesPerCapita
@@ -430,7 +430,7 @@ class TimeSeriesParser:
                         casesPerCapita = int(
                             data_state_daily[county_fips]
                             / population[county_fips]
-                            * 1000000000
+                            * pow(10, 6)
                         )
                         if data_state_daily["maxPerCapita"] < casesPerCapita:
                             data_state_daily["maxPerCapita"] = casesPerCapita
