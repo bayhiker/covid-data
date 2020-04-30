@@ -9,9 +9,15 @@ from utils import (
     get_date_titles,
     get_title_future_or_past,
     get_title_tomorrow,
+    parse_int,
 )
-from us import state_fips_iterator, split_county_fips
+from us import (
+    state_fips_iterator,
+    split_county_fips,
+    new_york_county_population,
+)
 from descarte import DescartesMobilityParser
+from special_counties import SpecialCounties
 
 
 class TimeSeriesParser:
@@ -29,13 +35,14 @@ class TimeSeriesParser:
         self.days_to_predict = 14
         # To be inited after loading headers->least/most_recent_date
         self.descartes = None
+        self.special_counties = None
         # us level: self.data["US"]['0'][confirmed/deaths/mobility/data_title]
         # state level: self.data["US"]['06'][confirmed/deaths/mobility/data_title]
         # county level: self.data["US"]['06']['06085'][confirmed/deaths/mobility]
         self.data = {"US": {}}
 
     @staticmethod
-    def format_fips(county_data_dict):
+    def format_county_data(county_data_dict):
         fips = county_data_dict["FIPS"] if "FIPS" in county_data_dict else None
         combined_key = (
             county_data_dict["Combined_Key"]
@@ -46,14 +53,43 @@ class TimeSeriesParser:
             fips = fips[0:-2]
         if fips is None or len(fips) == 0:
             if combined_key == "Dukes and Nantucket,Massachusetts,US":
-                fips = "25007"  # Use Dukes county only for now, Nantucket is 25019
+                fips = "25555"  # Use Dukes county only for now, Nantucket is 25019
             elif combined_key == "Kansas City,Missouri,US":
-                fips = "28059"  # Cass, Clay, Jackson, Platte, use Jackson for now
+                fips = "29555"  # Cass, Clay, Jackson, Platte, use Jackson for now
+            elif (
+                combined_key
+                == "Michigan Department of Corrections (MDOC), Michigan, US"
+            ):
+                fips = "26555"  # Made-up fips code for MDOC
+            elif combined_key == "Federal Correctional Institution (FCI), Michigan, US":
+                fips = "26556"  # Made-up fips code for FCI, Michigan
+            # https://ibis.health.utah.gov/ibisph-view/about/LocalHealth.html
+            elif combined_key == "Bear River, Utah, US":
+                fips = "49555"  # Made-up fips for bear river city UTAH
+            elif combined_key == "Central Utah, Utah, US":
+                # Sanpete, Sevier, and Piute, as well as the eastern (east of longitude 113W)
+                # halves of Juab, Millard, and Beaver counties
+                fips = "49556"  # Use made-up fips for central utah
+            elif combined_key == "Southeast Utah, Utah, US":
+                fips = "49557"  # Use made-up fips 101 for central utah
+            elif combined_key == "Southwest Utah, Utah, US":
+                fips = "49558"  # Use made-up fips 101 for central utah
+            elif combined_key == "Weber-Morgan, Utah, US":
+                fips = "49559"  # Use made-up fips 101 for central utah
+            elif combined_key == "TriCounty, Utah, US":
+                fips = "49560"  # Use made-up fips 101 for central utah
             else:
                 fips = ""
                 print(
                     f"No FIPS found, ignoring {combined_key} for now, county_data_dict was {county_data_dict}"
                 )
+        if fips in ["60", "66", "69", "72", "78"]:
+            # Us territories, no counties, use xx001 like DC, and fill county name with territory name
+            fips = f"{fips}001"
+            county_data_dict["Admin2"] = county_data_dict["Province_State"]
+        if fips == "36061":
+            # Correct NY county population
+            county_data_dict["Population"] = new_york_county_population
         county_data_dict["FIPS"] = fips.zfill(5)
 
     @staticmethod
@@ -82,6 +118,10 @@ class TimeSeriesParser:
         self.descartes = DescartesMobilityParser(
             self.least_recent_date, self.most_recent_date, self.days_to_predict
         )
+        self.special_counties = SpecialCounties(
+            get_date_from_title(self.least_recent_date),
+            get_date_from_title(self.most_recent_date),
+        )
         print(f"Most recent date is {self.most_recent_date}")
 
     def parse_line_confirmed(self, line):
@@ -91,7 +131,7 @@ class TimeSeriesParser:
                 TimeSeriesParser.partition_csv_line(line),
             )
         )
-        TimeSeriesParser.format_fips(d)
+        TimeSeriesParser.format_county_data(d)
         return d
 
     def parse_line_deaths(self, line):
@@ -101,7 +141,7 @@ class TimeSeriesParser:
                 TimeSeriesParser.partition_csv_line(line),
             )
         )
-        TimeSeriesParser.format_fips(d)
+        TimeSeriesParser.format_county_data(d)
         return d
 
     def _get_default_data_root(self):
@@ -125,8 +165,12 @@ class TimeSeriesParser:
             county_name_hash = (county_name_hash * ord(c)) % 9999999
         return county_name_hash
 
-    def process_county_data(self, county_data_confirmed, county_data_deaths):
+    def process_county_data(self, county_data):
+        county_data_confirmed = county_data["confirmed"]
+        county_data_deaths = county_data["deaths"]
         assert county_data_confirmed["FIPS"] == county_data_deaths["FIPS"]
+        # For counties reported within a healthcare region, distribute regional to counties
+        self.special_counties.update_county_data(county_data)
         fips = county_data_confirmed["FIPS"]
         (state_fips, county_fips) = split_county_fips(fips)
         data_us = self.data["US"].setdefault("0", self._get_default_data_root())
@@ -150,12 +194,11 @@ class TimeSeriesParser:
                 "least_recent_date": self.least_recent_date,
                 "most_recent_date": self.most_recent_date,
                 "confirmed": {
-                    x: _parse_cases_count(county_data_confirmed[x])
+                    x: parse_int(county_data_confirmed[x])
                     for x in self.date_keys_history
                 },
                 "deaths": {
-                    x: _parse_cases_count(county_data_deaths[x])
-                    for x in self.date_keys_history
+                    x: parse_int(county_data_deaths[x]) for x in self.date_keys_history
                 },
                 "population": county_population,
                 "name": county_name,
@@ -205,11 +248,9 @@ class TimeSeriesParser:
 
         for d in self.date_keys_history:
             update_us_and_state(
-                "confirmed", _parse_cases_count(county_data_confirmed.get(d, "0"))
+                "confirmed", parse_int(county_data_confirmed.get(d, "0"))
             )
-            update_us_and_state(
-                "deaths", _parse_cases_count(county_data_deaths.get(d, "0"))
-            )
+            update_us_and_state("deaths", parse_int(county_data_deaths.get(d, "0")))
 
     def _get_json_path(self, fips):
         assert len(fips) in (1, 2, 5)
@@ -368,14 +409,13 @@ class TimeSeriesParser:
                     )
                     mobility_data_daily[county_fips] = mobility_county[date_title]
 
-    def parse(self):
-        # Read in JHU county time series data
+    def process_jhu_data_files(self, county_data_processor):
         with open(self.raw_data_file_confirmed) as fp_confirmed, open(
             self.raw_data_file_deaths
         ) as fp_deaths:
+            # Skip the first header line
             line_confirmed = fp_confirmed.readline()
             line_deaths = fp_deaths.readline()
-            self.set_headers(line_confirmed, line_deaths)
             while line_confirmed and line_deaths:
                 line_confirmed = fp_confirmed.readline()
                 line_deaths = fp_deaths.readline()
@@ -391,7 +431,22 @@ class TimeSeriesParser:
                         f"Ignoring US territories for now. FIPS was {parsed_line_confirmed['FIPS']}"
                     )
                     continue
-                self.process_county_data(parsed_line_confirmed, parsed_line_deaths)
+                county_data_processor(
+                    {"confirmed": parsed_line_confirmed, "deaths": parsed_line_deaths}
+                )
+
+    def parse(self):
+        # Set headers from
+        with open(self.raw_data_file_confirmed) as fp_confirmed, open(
+            self.raw_data_file_deaths
+        ) as fp_deaths:
+            line_confirmed = fp_confirmed.readline()
+            line_deaths = fp_deaths.readline()
+            self.set_headers(line_confirmed, line_deaths)
+        # Proprocess JHU county time series data, fill self.special_counties
+        self.process_jhu_data_files(self.special_counties.preprocess_county_data)
+        # Read in and process JHU county time series data
+        self.process_jhu_data_files(self.process_county_data)
         # Go through data_us["0"]['confirmed'][by_date], each date, set 'minCases' and 'maxCases'
         for d in self.date_keys_history:
             for case_type in ("confirmed", "deaths"):
@@ -427,6 +482,12 @@ class TimeSeriesParser:
                             or county_fips.startswith("900")
                         ):
                             continue
+                        if (
+                            int(county_fips) % 1000 < 600
+                            and int(county_fips) % 1000 >= 555
+                        ):
+                            # Made up regions
+                            continue
                         casesPerCapita = int(
                             data_state_daily[county_fips]
                             / population[county_fips]
@@ -437,10 +498,6 @@ class TimeSeriesParser:
                         if data_state_daily["minPerCapita"] > casesPerCapita:
                             data_state_daily["minPerCapita"] = casesPerCapita
         self.add_mobility_data()
+        self.special_counties.verify_regional_data()
         # self.predict()
         self.dump_data()
-
-
-def _parse_cases_count(cases_from_csv):
-    # sometimes value is 0.0
-    return int(float(cases_from_csv))

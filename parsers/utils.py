@@ -39,3 +39,13 @@ def get_title_yesterday(current_date_title):
 
 def get_title_tomorrow(current_date_title):
     return get_title_future_or_past(current_date_title, 1)
+
+
+def date_range(start_date, end_date):
+    for n in range(int((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
+
+def parse_int(int_from_csv):
+    # sometimes value is 0.0
+    return int(float(int_from_csv))

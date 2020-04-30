@@ -4,6 +4,8 @@ import json
 # To be consistent, population is sum of all population in ./json/state.json
 united_states = {"population": 315482390}
 
+new_york_county_population = 1628706
+
 state_fips_map = {
     "AK": "02",
     "AL": "01",
