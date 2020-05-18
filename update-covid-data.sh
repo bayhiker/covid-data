@@ -11,8 +11,8 @@ while getopts ":f" opt; do
     esac
 done
 
-COVID_DATA_PARSER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-COVID_DATA_SOURCES_DIR="$COVID_DATA_PARSER_DIR/../../covid-data-sources"
+COVID_DATA_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+COVID_DATA_SOURCES_DIR="$COVID_DATA_DIR/../covid-data-sources"
 COVID_DATA_SOURCES_DIR_JHU="$COVID_DATA_SOURCES_DIR/COVID-19"
 COVID_DATA_SOURCES_DIR_DL="$COVID_DATA_SOURCES_DIR/DL-COVID-19"
 
@@ -41,7 +41,7 @@ if [ "${UPDATE_FOUND}" = "no" ]; then
 fi
 source ~/.profile
 workon covid-data
-cd $COVID_DATA_PARSER_DIR
+cd $COVID_DATA_DIR
 ./mesh_covid_data.py
 if [ $? -ne 0 ]
 then

@@ -1,12 +1,12 @@
 from datetime import date
 import ndjson
-from utils import (
+from ..utils import (
     get_title_from_date,
     get_date_from_title,
     get_date_titles,
     get_title_future_or_past,
 )
-from us import (
+from ..us import (
     state_fips_iterator,
     fips_state_map,
     united_states,
@@ -17,13 +17,21 @@ from us import (
 
 
 class DescartesMobilityParser:
-    def __init__(self, start_date_title, end_date_title, days_to_predict):
-        self.ndjson_path = "../../covid-data-sources/DL-COVID-19/DL-us-mobility.ndjson"
+    def __init__(
+        self,
+        data,
+        data_source_folder,
+        start_date_title,
+        end_date_title,
+        days_to_predict,
+    ):
+        self.ndjson_path = f"{data_source_folder}/DL-COVID-19/DL-us-mobility.ndjson"
         self.m50 = {}  # fips->{date->m50} absolute mobility level defined by Descartes
         self.m50_index = {}  # fips-> {date->m50_index}, 100*m50/m50_norm
         self.start_date_title = start_date_title
         self.end_date_title = end_date_title
         self.days_to_predict = days_to_predict
+        self.data = data
         self.load()
 
     def load(self):
@@ -104,6 +112,31 @@ class DescartesMobilityParser:
                 mobility_data.keys(), key=lambda title: get_date_from_title(title)
             )
         }
+
+    def add_mobility_data(self):
+        # Update us mobility-time_series
+        data_us = self.data["US"]["0"]
+        data_us["mobility"]["time_series"] = self.get_us_m50_index()
+        for state_fips in state_fips_iterator():
+            # Update state mobility-timeseries
+            mobility_state = self.get_m50_index(state_fips)
+            data_state = self.data["US"][state_fips]
+            data_state["mobility"]["time_series"] = mobility_state
+            # Update us[mobility][date_title][state_fips]
+            for date_title in mobility_state:
+                mobility_data_daily = data_us["mobility"].setdefault(date_title, {})
+                mobility_data_daily[state_fips] = mobility_state[date_title]
+            # data_state['names'] should have been set, call confirmed/deaths parsing before mobility parsing
+            for county_fips in data_state["names"]:
+                if len(county_fips) != 5 or not county_fips.isdigit():
+                    continue
+                mobility_county = self.get_m50_index(county_fips)
+                data_state[county_fips]["mobility"] = mobility_county
+                for date_title in mobility_county:
+                    mobility_data_daily = data_state["mobility"].setdefault(
+                        date_title, {}
+                    )
+                    mobility_data_daily[county_fips] = mobility_county[date_title]
 
 
 def format_date_title(descartes_date):

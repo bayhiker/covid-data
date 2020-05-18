@@ -3,8 +3,8 @@ from datetime import timedelta
 import math
 from copy import deepcopy
 from itertools import groupby
-from utils import date_range, get_title_from_date, parse_int
-from us import new_york_county_population
+from ..utils import date_range, get_title_from_date, parse_int
+from ..us import new_york_county_population
 
 
 class SpecialCounties:
