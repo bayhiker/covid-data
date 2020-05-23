@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 
 def get_title_from_date(d):
@@ -7,9 +7,17 @@ def get_title_from_date(d):
 
 def get_date_from_title(title):
     assert title is not None
-    (m, d, yy) = title.split("/")
-    assert m is not None and d is not None and yy is not None
-    return date(int(f"20{yy}"), int(m), int(d))
+    return datetime.strptime(title, "%m/%d/%y").date()
+
+
+def get_date_from_yyyymmdd(yyyymmdd):
+    assert yyyymmdd is not None
+    return datetime.strptime(yyyymmdd, "%Y%m%d").date()
+
+
+def get_title_from_yyyymmdd(yyyymmdd):
+    assert yyyymmdd is not None
+    return get_title_from_date(get_date_from_yyyymmdd(yyyymmdd))
 
 
 def get_date_titles(start_date_title, end_date_title):

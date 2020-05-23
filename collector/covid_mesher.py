@@ -2,6 +2,7 @@
 
 from .parsers import JhuParser
 from .parsers import DescartesMobilityParser
+from .parsers import CovidTrackingParser
 from .data_dumper import DataDumper
 
 # from covid_predictor import CovidPredictor
@@ -16,19 +17,18 @@ class CovidMesher:
         # state level: self.data["US"]['06'][confirmed/deaths/mobility/data_title]
         # county level: self.data["US"]['06']['06085'][confirmed/deaths/mobility]
         self.data = {"US": {}}
-        self.descartes = None
 
     def mesh(self):
         jhuParser = JhuParser(self.data, self.data_source_folder)
         jhuParser.parse()
-        self.descartes = DescartesMobilityParser(
+        descartes = DescartesMobilityParser(
             self.data,
             self.data_source_folder,
             jhuParser.least_recent_date,
             jhuParser.most_recent_date,
             self.days_to_predict,
         )
-        self.descartes.add_mobility_data()
+        descartes.parse()
         # covidPredictor = CovidPredictor(
         #    self.days_to_predict,
         #    jhuParser.least_recent_date,
@@ -36,5 +36,8 @@ class CovidMesher:
         #    self.data,
         # )
         # covidPredictor.predict()
+        covidTrackingParser = CovidTrackingParser(self.data, self.data_source_folder)
+        covidTrackingParser.parse()
+
         dataDumper = DataDumper(self.data, self.data_target_folder)
         dataDumper.dump_data()

@@ -8,8 +8,9 @@ from flask_compress import Compress
 from flask_babel import Babel
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
+from redis import StrictRedis
 from config import config as Config
-from utils import setup_logger
+from .utils import setup_logger
 
 
 class YouQuizError(Exception):

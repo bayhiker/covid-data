@@ -15,6 +15,7 @@ COVID_DATA_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)
 COVID_DATA_SOURCES_DIR="$COVID_DATA_DIR/../covid-data-sources"
 COVID_DATA_SOURCES_DIR_JHU="$COVID_DATA_SOURCES_DIR/COVID-19"
 COVID_DATA_SOURCES_DIR_DL="$COVID_DATA_SOURCES_DIR/DL-COVID-19"
+COVID_DATA_SOURCES_DIR_CTD="$COVID_DATA_SOURCES_DIR/covid-tracking-data"
 
 echo "Current time is: $(date)"
 
@@ -28,6 +29,12 @@ fi
 cd $COVID_DATA_SOURCES_DIR_DL
 if /usr/bin/git pull | grep -q 'Already up to date'; then
     echo 'DL mobility data is up-to-date'
+else
+    UPDATE_FOUND="yes"
+fi
+cd $COVID_DATA_SOURCES_DIR_CTD
+if /usr/bin/git pull | grep -q 'Already up to date'; then
+    echo 'CTD data is up-to-date'
 else
     UPDATE_FOUND="yes"
 fi

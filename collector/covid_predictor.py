@@ -1,10 +1,10 @@
 from sklearn.linear_model import LogisticRegression
-from utils import (
+from .utils import (
     get_date_titles,
     get_title_future_or_past,
     get_title_tomorrow,
 )
-from us import state_fips_iterator
+from .us import state_fips_iterator
 
 
 class CovidPredictor:

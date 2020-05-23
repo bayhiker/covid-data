@@ -1,4 +1,4 @@
-from us import is_state_fips, is_county_fips, split_county_fips
+from collector.us import is_state_fips, is_county_fips, split_county_fips
 
 
 class UtilsTestCase:

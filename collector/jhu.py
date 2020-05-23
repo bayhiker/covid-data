@@ -6,25 +6,18 @@ from ..utils import (
     get_date_titles,
     parse_int,
 )
-from ..us import (
+from us import (
     state_fips_iterator,
     split_county_fips,
     new_york_county_population,
 )
 from .special_counties import SpecialCounties
-from .covid_parser import CovidParser
 
 
-class JhuParser(CovidParser):
-    def __init__(self, data, data_source_folder):
-        super().__init__(data, data_source_folder)
-        jhu_data_folder = f"{data_source_folder}/COVID-19/csse_covid_19_data/csse_covid_19_time_series"
-        self.raw_data_file_confirmed = (
-            f"{jhu_data_folder}/time_series_covid19_confirmed_US.csv"
-        )
-        self.raw_data_file_deaths = (
-            f"{jhu_data_folder}/time_series_covid19_deaths_US.csv"
-        )
+class JhuParser:
+    def __init__(self, data):
+        self.raw_data_file_confirmed = "../../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
+        self.raw_data_file_deaths = "../../covid-data-sources/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
         self.headers_time_series_confirmed = []
         self.headers_time_series_deaths = []
         self.least_recent_date = "1/22/20"
@@ -32,12 +25,11 @@ class JhuParser(CovidParser):
         self.date_keys_history = []
         # To be inited after loading headers->least/most_recent_date
         self.special_counties = None
+        self.data = data
 
     def set_headers(self, headers_line_confirmed, headers_line_deaths):
-        self.headers_time_series_confirmed = self.partition_csv_line(
-            headers_line_confirmed
-        )
-        self.headers_time_series_deaths = self.partition_csv_line(headers_line_deaths)
+        self.headers_time_series_confirmed = partition_csv_line(headers_line_confirmed)
+        self.headers_time_series_deaths = partition_csv_line(headers_line_deaths)
         header_length_confirmed = len(self.headers_time_series_confirmed)
         self.most_recent_date = self.headers_time_series_confirmed[
             header_length_confirmed - 1
@@ -53,14 +45,12 @@ class JhuParser(CovidParser):
         print(f"Most recent date is {self.most_recent_date}")
 
     def parse_line_confirmed(self, line):
-        d = dict(
-            zip(self.headers_time_series_confirmed, self.partition_csv_line(line),)
-        )
+        d = dict(zip(self.headers_time_series_confirmed, partition_csv_line(line),))
         format_county_data(d)
         return d
 
     def parse_line_deaths(self, line):
-        d = dict(zip(self.headers_time_series_deaths, self.partition_csv_line(line),))
+        d = dict(zip(self.headers_time_series_deaths, partition_csv_line(line),))
         format_county_data(d)
         return d
 
@@ -252,6 +242,10 @@ class JhuParser(CovidParser):
                         if data_state_daily["minPerCapita"] > casesPerCapita:
                             data_state_daily["minPerCapita"] = casesPerCapita
         self.special_counties.verify_regional_data()
+
+
+def partition_csv_line(line):
+    return list(csv.reader([line]))[0]
 
 
 def format_county_data(county_data_dict):

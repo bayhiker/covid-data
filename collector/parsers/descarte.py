@@ -14,9 +14,10 @@ from ..us import (
     is_county_fips,
     split_county_fips,
 )
+from .covid_parser import CovidParser
 
 
-class DescartesMobilityParser:
+class DescartesMobilityParser(CovidParser):
     def __init__(
         self,
         data,
@@ -25,13 +26,13 @@ class DescartesMobilityParser:
         end_date_title,
         days_to_predict,
     ):
+        super().__init__(data, data_source_folder)
         self.ndjson_path = f"{data_source_folder}/DL-COVID-19/DL-us-mobility.ndjson"
         self.m50 = {}  # fips->{date->m50} absolute mobility level defined by Descartes
         self.m50_index = {}  # fips-> {date->m50_index}, 100*m50/m50_norm
         self.start_date_title = start_date_title
         self.end_date_title = end_date_title
         self.days_to_predict = days_to_predict
-        self.data = data
         self.load()
 
     def load(self):
@@ -113,7 +114,7 @@ class DescartesMobilityParser:
             )
         }
 
-    def add_mobility_data(self):
+    def parse(self):
         # Update us mobility-time_series
         data_us = self.data["US"]["0"]
         data_us["mobility"]["time_series"] = self.get_us_m50_index()
