@@ -175,20 +175,28 @@ class JhuParser(CovidParser):
             # Skip the first header line
             line_confirmed = fp_confirmed.readline()
             line_deaths = fp_deaths.readline()
-            while line_confirmed and line_deaths:
-                line_confirmed = fp_confirmed.readline()
+            all_parsed_line_deaths = {}
+            while line_deaths:
                 line_deaths = fp_deaths.readline()
-                parsed_line_confirmed = self.parse_line_us(
-                    self.headers_us_time_series_confirmed, line_confirmed
-                )
                 parsed_line_deaths = self.parse_line_us(
                     self.headers_us_time_series_deaths, line_deaths
                 )
-                if parsed_line_confirmed["FIPS"] != parsed_line_deaths["FIPS"]:
-                    print("Mismatching confirmed and deaths lines")
-                    print(f"C line:{line_confirmed}")
-                    print(f"D line:{line_deaths}")
+                if not "UID" in parsed_line_deaths:
+                    print(f"Ignoring deaths line with no UID: {line_deaths}")
                     continue
+                all_parsed_line_deaths[parsed_line_deaths["UID"]] = parsed_line_deaths
+            while line_confirmed:
+                line_confirmed = fp_confirmed.readline()
+                parsed_line_confirmed = self.parse_line_us(
+                    self.headers_us_time_series_confirmed, line_confirmed
+                )
+                if not "UID" in parsed_line_confirmed:
+                    print(f"Ignoring confirmed line with no UID: {line_confirmed}")
+                    continue
+                current_uid = parsed_line_confirmed["UID"]
+                parsed_line_deaths = all_parsed_line_deaths.get(current_uid, None)
+                if not parsed_line_deaths:
+                    print(f"Deaths line with UID {current_uid} not found.")
                 if parsed_line_confirmed["FIPS"].startswith("000"):
                     print(
                         f"Ignoring US territories for now. FIPS was {parsed_line_confirmed['FIPS']}"
