@@ -26,6 +26,8 @@ class UtilsTestCase:
     def test_date_range(self):
         l = list(date_range(datetime.now(), datetime.now() + timedelta(10)))
         assert len(l) == 10
+        l = list(date_range(datetime.now(), datetime.now() + timedelta(-20)))
+        assert len(l) == 20
 
     def test_get_title_from_yyyymmdd(self):
         assert get_title_from_yyyymmdd("20200301") == "3/1/20"

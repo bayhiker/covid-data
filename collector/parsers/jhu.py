@@ -19,27 +19,39 @@ class JhuParser(CovidParser):
     def __init__(self, data, data_source_folder):
         super().__init__(data, data_source_folder)
         jhu_data_folder = f"{data_source_folder}/COVID-19/csse_covid_19_data/csse_covid_19_time_series"
-        self.raw_data_file_confirmed = (
+        self.lookup_table_file = f"{jhu_data_folder}/../UID_ISO_FIPS_LookUp_Table.csv"
+        self.raw_us_data_file_confirmed = (
             f"{jhu_data_folder}/time_series_covid19_confirmed_US.csv"
         )
-        self.raw_data_file_deaths = (
+        self.raw_us_data_file_deaths = (
             f"{jhu_data_folder}/time_series_covid19_deaths_US.csv"
         )
-        self.headers_time_series_confirmed = []
-        self.headers_time_series_deaths = []
+        self.raw_global_data_file_confirmed = (
+            f"{jhu_data_folder}/time_series_covid19_confirmed_global.csv"
+        )
+        self.raw_global_data_file_deaths = (
+            f"{jhu_data_folder}/time_series_covid19_deaths_global.csv"
+        )
+        self.headers_us_time_series_confirmed = []
+        self.headers_us_time_series_deaths = []
+        self.headers_global_time_series_confirmed = []
+        self.headers_global_time_series_deaths = []
+        # least_recent_date, most_recent_date, date_keys_history are the same between us and global
         self.least_recent_date = "1/22/20"
         self.most_recent_date = ""  # In m/dd/yy, just like in JHU dataset
         self.date_keys_history = []
         # To be inited after loading headers->least/most_recent_date
         self.special_counties = None
 
-    def set_headers(self, headers_line_confirmed, headers_line_deaths):
-        self.headers_time_series_confirmed = self.partition_csv_line(
-            headers_line_confirmed
+    def set_headers_us(self, headers_us_line_confirmed, headers_us_line_deaths):
+        self.headers_us_time_series_confirmed = self.partition_csv_line(
+            headers_us_line_confirmed
         )
-        self.headers_time_series_deaths = self.partition_csv_line(headers_line_deaths)
-        header_length_confirmed = len(self.headers_time_series_confirmed)
-        self.most_recent_date = self.headers_time_series_confirmed[
+        self.headers_us_time_series_deaths = self.partition_csv_line(
+            headers_us_line_deaths
+        )
+        header_length_confirmed = len(self.headers_us_time_series_confirmed)
+        self.most_recent_date = self.headers_us_time_series_confirmed[
             header_length_confirmed - 1
         ]
         self.date_keys_history = get_date_titles(
@@ -52,19 +64,12 @@ class JhuParser(CovidParser):
         )
         print(f"Most recent date is {self.most_recent_date}")
 
-    def parse_line_confirmed(self, line):
-        d = dict(
-            zip(self.headers_time_series_confirmed, self.partition_csv_line(line),)
-        )
-        format_county_data(d)
+    def parse_line_us(self, headers, line):
+        d = dict(zip(headers, self.partition_csv_line(line),))
+        format_us_county_data(d)
         return d
 
-    def parse_line_deaths(self, line):
-        d = dict(zip(self.headers_time_series_deaths, self.partition_csv_line(line),))
-        format_county_data(d)
-        return d
-
-    def _get_default_data_root(self):
+    def _get_default_data_root_us(self):
         return {
             "least_recent_date": self.least_recent_date,
             "most_recent_date": self.most_recent_date,
@@ -76,7 +81,7 @@ class JhuParser(CovidParser):
             "hashes": {},  # key is a hash of full name, value is fips, only used for counties in state data
         }
 
-    def process_county_data(self, county_data):
+    def process_us_county_data(self, county_data):
         county_data_confirmed = county_data["confirmed"]
         county_data_deaths = county_data["deaths"]
         assert county_data_confirmed["FIPS"] == county_data_deaths["FIPS"]
@@ -84,14 +89,14 @@ class JhuParser(CovidParser):
         self.special_counties.update_county_data(county_data)
         fips = county_data_confirmed["FIPS"]
         (state_fips, county_fips) = split_county_fips(fips)
-        data_us = self.data["US"].setdefault("0", self._get_default_data_root())
+        data_us = self.data["US"].setdefault("0", self._get_default_data_root_us())
         data_state = self.data["US"].setdefault(
-            state_fips, self._get_default_data_root()
+            state_fips, self._get_default_data_root_us()
         )
         county_population = int(county_data_deaths["Population"])
         county_name = county_data_deaths["Admin2"]
         county_name_hash = (
-            _get_county_name_hash(county_name)
+            _get_us_county_name_hash(county_name)
             if county_name is not None
             and len(county_name) > 2
             and not county_name.startswith("Out of ")
@@ -164,8 +169,8 @@ class JhuParser(CovidParser):
             update_us_and_state("deaths", parse_int(county_data_deaths.get(d, "0")))
 
     def process_jhu_data_files(self, county_data_processor):
-        with open(self.raw_data_file_confirmed) as fp_confirmed, open(
-            self.raw_data_file_deaths
+        with open(self.raw_us_data_file_confirmed) as fp_confirmed, open(
+            self.raw_us_data_file_deaths
         ) as fp_deaths:
             # Skip the first header line
             line_confirmed = fp_confirmed.readline()
@@ -173,8 +178,12 @@ class JhuParser(CovidParser):
             while line_confirmed and line_deaths:
                 line_confirmed = fp_confirmed.readline()
                 line_deaths = fp_deaths.readline()
-                parsed_line_confirmed = self.parse_line_confirmed(line_confirmed)
-                parsed_line_deaths = self.parse_line_deaths(line_deaths)
+                parsed_line_confirmed = self.parse_line_us(
+                    self.headers_us_time_series_confirmed, line_confirmed
+                )
+                parsed_line_deaths = self.parse_line_us(
+                    self.headers_us_time_series_deaths, line_deaths
+                )
                 if parsed_line_confirmed["FIPS"] != parsed_line_deaths["FIPS"]:
                     print("Mismatching confirmed and deaths lines")
                     print(f"C line:{line_confirmed}")
@@ -189,18 +198,18 @@ class JhuParser(CovidParser):
                     {"confirmed": parsed_line_confirmed, "deaths": parsed_line_deaths}
                 )
 
-    def parse(self):
-        # Set headers from
-        with open(self.raw_data_file_confirmed) as fp_confirmed, open(
-            self.raw_data_file_deaths
+    def parse_us(self):
+        # Set headers_us from
+        with open(self.raw_us_data_file_confirmed) as fp_confirmed, open(
+            self.raw_us_data_file_deaths
         ) as fp_deaths:
             line_confirmed = fp_confirmed.readline()
             line_deaths = fp_deaths.readline()
-            self.set_headers(line_confirmed, line_deaths)
+            self.set_headers_us(line_confirmed, line_deaths)
         # Proprocess JHU county time series data, fill self.special_counties
         self.process_jhu_data_files(self.special_counties.preprocess_county_data)
         # Read in and process JHU county time series data
-        self.process_jhu_data_files(self.process_county_data)
+        self.process_jhu_data_files(self.process_us_county_data)
         # Go through data_us["0"]['confirmed'][by_date], each date, set 'minCases' and 'maxCases'
         for d in self.date_keys_history:
             for case_type in ("confirmed", "deaths"):
@@ -253,8 +262,18 @@ class JhuParser(CovidParser):
                             data_state_daily["minPerCapita"] = casesPerCapita
         self.special_counties.verify_regional_data()
 
+    def process_lookup_table(self):
+        pass
 
-def format_county_data(county_data_dict):
+    def parse_global(self):
+        pass
+
+    def parse(self):
+        self.parse_us()
+        self.parse_global()
+
+
+def format_us_county_data(county_data_dict):
     fips = county_data_dict["FIPS"] if "FIPS" in county_data_dict else None
     combined_key = (
         county_data_dict["Combined_Key"] if "Combined_Key" in county_data_dict else None
@@ -300,7 +319,7 @@ def format_county_data(county_data_dict):
     county_data_dict["FIPS"] = fips.zfill(5)
 
 
-def _get_county_name_hash(county_name):
+def _get_us_county_name_hash(county_name):
     # A sevent digit integer,
     assert county_name is not None and len(county_name) > 2
     county_name_hash = 1

@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "cwd": "/home/mike/code/covid-data/parsers",
+      "cwd": "/home/mike/code/covid-data",
       "name": "Python: Current File",
       "type": "python",
       "request": "launch",

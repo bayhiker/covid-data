@@ -50,8 +50,10 @@ def get_title_tomorrow(current_date_title):
 
 
 def date_range(start_date, end_date):
-    for n in range(int((end_date - start_date).days)):
-        yield start_date + timedelta(n)
+    days_apart = int((end_date - start_date).days)
+    multiplier = 1 if days_apart > 0 else -1
+    for n in range(abs(days_apart) + 1):
+        yield start_date + timedelta(n * multiplier)
 
 
 def parse_int(int_from_csv):

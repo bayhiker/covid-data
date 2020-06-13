@@ -69,7 +69,6 @@ class CovidPredictor:
                 **predictions_us,
             }
             for state_fips in state_fips_iterator():
-                print(f"Predicting state {state_fips}")
                 data_state = self.data["US"][state_fips]
                 cases_time_series_state = data_state[case_type]["time_series"]
                 # Predicted cases for state with this state_fips
