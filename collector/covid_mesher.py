@@ -3,6 +3,7 @@
 from .parsers import JhuParser
 from .parsers import DescartesMobilityParser
 from .parsers import CovidTrackingParser
+from .parsers import Votes2016Parser
 from .data_dumper import DataDumper
 
 # from covid_predictor import CovidPredictor
@@ -38,6 +39,8 @@ class CovidMesher:
         # covidPredictor.predict()
         covidTrackingParser = CovidTrackingParser(self.data, self.data_source_folder)
         covidTrackingParser.parse()
+        votes2016Parser = Votes2016Parser(self.data, self.data_source_folder)
+        votes2016Parser.parse()
 
         dataDumper = DataDumper(self.data, self.data_target_folder)
         dataDumper.dump_data()
