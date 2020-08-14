@@ -56,7 +56,6 @@ class DescartesMobilityParser(CovidParser):
         return self._get_local_mobility_data(self.m50_index, fips)
 
     def _get_local_mobility_data(self, mobility_data_dict, fips):
-        raw_mobility_data = None
         if fips in mobility_data_dict:
             return self.patch_daily_mobility(mobility_data_dict[fips])
         # We know we have mobility data for all states

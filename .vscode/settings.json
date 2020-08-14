@@ -1,9 +1,19 @@
 {
-    "python.pythonPath": "/home/mike/.virtualenvs/covid-data/bin/python3",
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.nosetestsEnabled": false,
-    "python.testing.pytestEnabled": true
+  "python.pythonPath": "/home/mike/.virtualenvs/covid-data/bin/python3",
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.nosetestsEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true,
+  "python.linting.flake8Args": [
+    "--ignore=E203",
+    "--ignore=E266",
+    "--ignore=E501",
+    "--ignore=W503",
+    "--max-line-length=88",
+    "--select = B,C,E,F,W,T4,B9",
+    "--max-complexity = 18"
+  ]
 }

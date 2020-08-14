@@ -1,6 +1,5 @@
 import abc
 import csv
-from datetime import timedelta
 from collector.utils import get_date_from_title, get_title_from_date, date_range
 
 

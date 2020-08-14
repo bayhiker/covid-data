@@ -68,8 +68,14 @@ class SpecialCounties:
         if fips in self.child_fips:
             # This is an aggregated regional data line,
             self.regional_data[fips] = county_data
-            # Assuming regional data always come at the end of
-            self.regional_data[fips]["Population"] = self.populations[fips]
+            # If regional data comes after member counties, then self.populations[fips]
+            # would contain its regional pop. If regional data comes before all member counties
+            # then self.populations[fips] is not set. Otherwise, self.population[fips]
+            # would contain partial regional population, and the remaining populations
+            # would be added in later
+            self.regional_data[fips]["Population"] = (
+                self.populations[fips] if fips in self.populations else 0
+            )
             return
         if fips not in self.region_fips:
             # Not a county with regional fips, nothing to do
