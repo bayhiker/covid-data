@@ -1,6 +1,7 @@
 #!/bin/bash
 
 FORCE=0
+WGET=/usr/bin/wget
 
 while getopts ":f" opt; do
     case ${opt} in 
@@ -32,12 +33,6 @@ if /usr/bin/git pull | grep -q 'Already up to date'; then
 else
     UPDATE_FOUND="yes"
 fi
-cd $COVID_DATA_SOURCES_DIR_CTD
-if /usr/bin/git pull | grep -q 'Already up to date'; then
-    echo 'CTD data is up-to-date'
-else
-    UPDATE_FOUND="yes"
-fi
 if [ "${UPDATE_FOUND}" = "no" ]; then
     if [ "${FORCE}" -eq "0" ]; then
         echo 'Nothing to be done'
@@ -46,6 +41,10 @@ if [ "${UPDATE_FOUND}" = "no" ]; then
         echo "Forcing data update without source data updates"
     fi
 fi
+# Update covid-tracking-data with API (moved to api since mid Aug)
+${WGET} https://api.covidtracking.com/v1/us/daily.csv -O ${COVID_DATA_SOURCES_DIR_CTD}/data/us_daily.csv
+${WGET} https://api.covidtracking.com/v1/states/daily.csv -O ${COVID_DATA_SOURCES_DIR_CTD}/data/states_daily_4pm_et.csv
+
 source ~/.profile
 workon covid-data
 cd $COVID_DATA_DIR
